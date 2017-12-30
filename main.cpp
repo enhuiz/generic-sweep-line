@@ -101,7 +101,7 @@ Plotter &operator<<(Plotter &out, const Point &point)
 
 Plotter &operator<<(Plotter &out, const Segment &segment)
 {
-    out << ln << segment.a << segment.b << endu;
+    out << begln << segment.a << segment.b << endln;
     return out;
 }
 
@@ -117,7 +117,6 @@ Plotter &operator<<(Plotter &out, const vector<Segment> &segments)
 void sweep_line(const vector<Segment> &segments)
 {
     pout << segments << show;
-    // plot(segments);
 
     struct Event
     {

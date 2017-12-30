@@ -6,6 +6,7 @@
 #include <fstream>
 #include <array>
 #include <string>
+#include <iostream>
 #include <vector>
 #include <map>
 
@@ -18,45 +19,38 @@ class Plotter
 public:
     Plotter()
     {
-        reset_unit();
     }
 
     void append_point(double x, double y)
     {
-        unit["points"].push_back({x, y});
+        points.push_back({x, y});
+        if (draw_line)
+            line.push_back({x, y});
     }
 
     void flush() 
     {
-        auto dumped =  units.dump();
-        units.clear();
-        call(dumped);
+        nlohmann::json dumper = {
+            {"points", points},
+            {"lines", lines},
+        };
+        points.clear();
+        lines.clear();
+        call(dumper.dump());
     }
 
     friend Plotter &show(Plotter &out);
-    friend Plotter &endu(Plotter &out);
-    friend Plotter &ln(Plotter &out);
+    friend Plotter &endln(Plotter &out);
+    friend Plotter &begln(Plotter &out);
 
 protected:
     void virtual call(const std::string& s) = 0;
 
-    void reset_unit()
-    {
-        static std::vector<std::string> items = {
-            "points",
-            "color",
-            "type",
-        };
-        unit.clear();
-        for (const auto &item : items)
-        {
-            unit[item] = {};
-        }
-        unit["type"] = "pt";
-    }
+    nlohmann::json points;
+    nlohmann::json line;
+    nlohmann::json lines;
 
-    nlohmann::json unit;
-    nlohmann::json units;
+    bool draw_line = false;
 };
 
 Plotter &show(Plotter &out)
@@ -65,17 +59,18 @@ Plotter &show(Plotter &out)
     return out;
 }
 
-Plotter &endu(Plotter &out)
+Plotter &endln(Plotter &out)
 {
-    if (out.unit["points"].size() > 0)
-    out.units.push_back(out.unit);
-    out.reset_unit();
+    out.draw_line = false;
+    out.lines.push_back(std::move(out.line));
+    assert(out.line.size() == 0);
     return out;
 }
 
-Plotter &ln(Plotter &out)
+Plotter &begln(Plotter &out)
 {
-    out.unit["type"] = "ln";
+    out.draw_line = true;
+    out.line.clear();
     return out;
 }
 

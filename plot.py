@@ -5,12 +5,6 @@ from matplotlib import patches
 import sys
 
 
-def plot_lines(ax, lines, colors=None):
-    ax.add_collection(collections.LineCollection(
-        lines, colors=colors, linewidths=(0.2, )))
-    return ax
-
-
 def plot_points(ax, points):
     for point in points:
         ax.add_patch(patches.Circle(point, 0.01, color='black'))
@@ -18,10 +12,12 @@ def plot_points(ax, points):
 
 
 def plot_polygon(ax, points, color='green'):
-    polygon = patches.Polygon(points, alpha=1, ec=color, fc='none')
+    polygon = patches.Polygon(points, alpha=1, ec=color, fc='none', lw=0.2)
     ax.add_patch(polygon)
     return ax
 
+def plot_lines(ax, points, color='green'):
+    return plot_polygon(ax, points)
 
 def show(plotter, *args):
     fig, ax = plt.subplots()
@@ -44,11 +40,13 @@ def plot_unit(ax, unit):
 def main():
     if(len(sys.argv) > 1):
         content = open(sys.argv[1]).read()
-        units = json.loads('{{ "units": {} }}'.format(content))['units']
+        data = json.loads('{{ "data": {} }}'.format(content))['data']
 
         fig, ax = plt.subplots()
-        for unit in units:
-            plot_unit(ax, unit)
+
+        plot_points(ax, data['points'])
+        for line in data['lines']:
+            plot_lines(ax, line)
 
         ax.autoscale()
         ax.axis('equal')
