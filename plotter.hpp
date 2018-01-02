@@ -4,6 +4,7 @@
 #include <sstream>
 #include <memory>
 #include <fstream>
+#include <functional>
 #include <array>
 #include <string>
 #include <iostream>
@@ -16,41 +17,44 @@ namespace plt
 {
 class Plotter
 {
-public:
+  public:
     Plotter()
     {
     }
 
-    void append_point(double x, double y)
+    void flush()
     {
-        points.push_back({x, y});
-        if (draw_line)
-            line.push_back({x, y});
-    }
-
-    void flush() 
-    {
+        end_prev_point();
         nlohmann::json dumper = {
             {"points", points},
-            {"lines", lines},
         };
-        points.clear();
-        lines.clear();
         call(dumper.dump());
     }
 
+    void end_prev_point()
+    {
+        if (point != nlohmann::json{})
+        {
+            points.push_back(point);
+            point = {};
+        }
+    }
+
     friend Plotter &show(Plotter &out);
-    friend Plotter &endln(Plotter &out);
-    friend Plotter &begln(Plotter &out);
+    friend Plotter &clean(Plotter &out);
+    friend Plotter &beg_ln(Plotter &out);
+    friend Plotter &end_ln(Plotter &out);
+    friend auto new_pt(double x, double y);
+    friend auto pt_size(double radius);
+    friend auto pt_color(std::string color);
 
-protected:
-    void virtual call(const std::string& s) = 0;
+  protected:
+    void virtual call(const std::string &s) = 0;
 
+    nlohmann::json point;
     nlohmann::json points;
-    nlohmann::json line;
-    nlohmann::json lines;
 
-    bool draw_line = false;
+    int lnk_id = -1;
 };
 
 Plotter &show(Plotter &out)
@@ -59,30 +63,61 @@ Plotter &show(Plotter &out)
     return out;
 }
 
-Plotter &endln(Plotter &out)
+Plotter &clean(Plotter &out)
 {
-    out.draw_line = false;
-    out.lines.push_back(std::move(out.line));
-    assert(out.line.size() == 0);
+    out.points.clear();
     return out;
 }
 
-Plotter &begln(Plotter &out)
+Plotter &beg_ln(Plotter &out)
 {
-    out.draw_line = true;
-    out.line.clear();
+    static int lnk_id_generator = 0;
+    out.lnk_id = lnk_id_generator++;
     return out;
 }
 
-Plotter &operator<<(Plotter &pout, decltype(show) op)
+Plotter &end_ln(Plotter &out)
+{
+    out.lnk_id = -1;
+    return out;
+}
+
+auto new_pt(double x, double y)
+{
+    return [x, y](Plotter &out) -> Plotter & {
+        out.end_prev_point();
+        out.point = {
+            {"xy", {x, y}},
+            {"lnk_id", out.lnk_id}};
+        return out;
+    };
+}
+
+auto pt_size(double radius)
+{
+    return [radius](Plotter &out) -> Plotter & {
+        out.point["radius"] = radius;
+        return out;
+    };
+}
+
+auto pt_color(std::string color)
+{
+    return [color](Plotter &out) -> Plotter & {
+        out.point["color"] = color;
+        return out;
+    };
+}
+
+Plotter &operator<<(Plotter &pout, std::function<Plotter &(Plotter &)> op)
 {
     return op(pout);
 }
 
 class PyPlotter : public Plotter
 {
-public:
-    void call(const std::string& dumped)
+  public:
+    void call(const std::string &dumped)
     {
         {
             std::ofstream ofs("tmp.txt");
@@ -92,7 +127,7 @@ public:
         exec("rm tmp.txt");
     }
 
-private:
+  private:
     std::string exec(const std::string &cmd) const
     {
         std::array<char, 128> buffer;

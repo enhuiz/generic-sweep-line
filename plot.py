@@ -1,23 +1,28 @@
+import sys
 import json
+import itertools
 import matplotlib.pyplot as plt
 from matplotlib import collections
 from matplotlib import patches
-import sys
 
 
 def plot_points(ax, points):
     for point in points:
-        ax.add_patch(patches.Circle(point, 0.01, color='black'))
+        xy = point['xy']
+        radius = 0.02 if 'radius' not in point else point['radius']
+        color = 'black' if 'color' not in point else point['color']
+        ax.add_patch(patches.Circle(point['xy'], radius=radius, color=color))
     return ax
 
 
-def plot_polygon(ax, points, color='green'):
-    polygon = patches.Polygon(points, alpha=1, ec=color, fc='none', lw=0.2)
-    ax.add_patch(polygon)
+def plot_linked_points(ax, points, color='green'):
+    points = list(points)
+    for a, b in zip(points[:-1], points[1:]):
+        color = 'black' if 'color' not in a else a['color']
+        ax.add_patch(patches.ConnectionPatch(
+            a['xy'], b['xy'], 'data', lw=1, color='green'))
     return ax
 
-def plot_lines(ax, points, color='green'):
-    return plot_polygon(ax, points)
 
 def show(plotter, *args):
     fig, ax = plt.subplots()
@@ -27,26 +32,17 @@ def show(plotter, *args):
     plt.show()
 
 
-def plot_unit(ax, unit):
-    color = unit['color'] or 'green'
-    points = unit['points']
-    if unit['type'] == 'pt':
-        plot_points(ax, unit['points'])
-    elif unit['type'] == 'ln':
-        plot_polygon(ax, unit['points'])
-        plot_points(ax, unit['points'])
-
-
 def main():
     if(len(sys.argv) > 1):
-        content = open(sys.argv[1]).read()
-        data = json.loads('{{ "data": {} }}'.format(content))['data']
+        points = json.load(open(sys.argv[1]))['points']
 
         fig, ax = plt.subplots()
 
-        plot_points(ax, data['points'])
-        for line in data['lines']:
-            plot_lines(ax, line)
+        for lnk_id, points in itertools.groupby(points, lambda p: p['lnk_id']):
+            if lnk_id < 0:
+                plot_points(ax, points)
+            else:
+                plot_linked_points(ax, points)
 
         ax.autoscale()
         ax.axis('equal')
