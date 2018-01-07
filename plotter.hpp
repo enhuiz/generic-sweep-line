@@ -20,6 +20,7 @@ class Plotter
   public:
     Plotter()
     {
+        reset(*this);
     }
 
     void flush()
@@ -41,9 +42,10 @@ class Plotter
     }
 
     friend Plotter &show(Plotter &out);
-    friend Plotter &clean(Plotter &out);
+    friend Plotter &clear(Plotter &out);
     friend Plotter &beg_ln(Plotter &out);
     friend Plotter &end_ln(Plotter &out);
+    friend Plotter &reset(Plotter &out);
     friend auto new_pt(double x, double y);
     friend auto pt_size(double radius);
     friend auto pt_color(std::string color);
@@ -64,9 +66,9 @@ Plotter &show(Plotter &out)
     return out;
 }
 
-Plotter &clean(Plotter &out)
+Plotter &clear(Plotter &out)
 {
-    out.applied.clear();
+    out.points.clear();
     return out;
 }
 
@@ -104,8 +106,8 @@ auto new_pt(double x, double y)
 
 auto pt_size(double radius)
 {
-    return [&radius](Plotter &out) {
-        out.applied.push_back([&radius](Plotter &out) -> Plotter & {
+    return [radius](Plotter &out) {
+        out.applied.push_back([radius](Plotter &out) -> Plotter & {
             out.point["radius"] = radius;
             return out;
         });
@@ -114,8 +116,8 @@ auto pt_size(double radius)
 
 auto pt_color(std::string color)
 {
-    return [&color](Plotter &out) -> Plotter & {
-        out.applied.push_back([&color](Plotter &out) -> Plotter & {
+    return [color](Plotter &out) -> Plotter & {
+        out.applied.push_back([color](Plotter &out) -> Plotter & {
             out.point["pt_color"] = color;
             return out;
         });
@@ -125,8 +127,8 @@ auto pt_color(std::string color)
 
 auto ln_color(std::string color)
 {
-    return [&color](Plotter &out) -> Plotter & {
-        out.applied.push_back([&color](Plotter &out) -> Plotter & {
+    return [color](Plotter &out) -> Plotter & {
+        out.applied.push_back([color](Plotter &out) -> Plotter & {
             out.point["ln_color"] = color;
             return out;
         });
@@ -137,6 +139,13 @@ auto ln_color(std::string color)
 Plotter &operator<<(Plotter &pout, std::function<Plotter &(Plotter &)> op)
 {
     return op(pout);
+}
+
+Plotter &reset(Plotter &out)
+{
+    out.applied.clear();
+    out << pt_color("black") << ln_color("green");
+    return out;
 }
 
 class PyPlotter : public Plotter
