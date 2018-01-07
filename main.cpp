@@ -127,8 +127,6 @@ Plotter &operator<<(Plotter &out, const vector<Segment> &segments)
 
 void sweep_line(const vector<Segment> &segments)
 {
-    pout << segments << show;
-
     struct Event
     {
         enum class Type
@@ -165,6 +163,7 @@ void sweep_line(const vector<Segment> &segments)
             events.insert({
                 segment.lower_endpoint(),
                 Event::Type::lower,
+                segment,
             });
         }
 
@@ -201,7 +200,6 @@ void sweep_line(const vector<Segment> &segments)
 
         // report_intersections (events_at_next_point)
         {
-            
         }
 
         const auto event_filter = [&events_at_next_point](Event::Type type) {
@@ -222,9 +220,22 @@ void sweep_line(const vector<Segment> &segments)
         // delete and insert/re-insert the segments into status
         {
             const auto remove_event_segment_from_status = [&status](const vector<Event> &events) {
+                auto erase_from_status = [&status](const auto &s1) {
+                    for (auto it = status.begin(); it != status.end(); ++it)
+                    {
+                        const auto &s2 = *it;
+                        if (s1.a == s2.a && s1.b == s2.b)
+                        {
+                            status.erase(it);
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+
                 for (const auto &event : events)
                 {
-                    status.erase(event.segment);
+                    assert(erase_from_status(event.segment) && "erase failed!");
                 }
             };
 
@@ -246,6 +257,7 @@ void sweep_line(const vector<Segment> &segments)
         // update intersection in the new status
         {
             const auto append_new_event = [&events](const Segment &l, const Segment &r, const Point &pt) {
+                // if the intersection point is under pt, register this event
                 auto ptr = intersection(l, r);
                 if (ptr != nullptr)
                 {
@@ -274,6 +286,8 @@ void sweep_line(const vector<Segment> &segments)
             {
                 if (upper_events.size() + intersection_events.size() == 0)
                 {
+                    // only leaving segments
+                    assert(lower_it == upper_it && "all segments on this point should be left.");
                     auto sl = *prev(lower_it);
                     auto sr = *upper_it;
                     append_new_event(sl, sr, key_segment.key);
@@ -296,12 +310,13 @@ void sweep_line(const vector<Segment> &segments)
 
         // illustrate
         {
+            pout << segments;
             for (auto segment : status)
             {
                 pout << ln_color("red") << segment;
             }
             pout << ln_color("black");
-            pout << events_at_next_point.front().point << show;
+            pout << events_at_next_point.front().point << show << clear;
         }
     }
 }
