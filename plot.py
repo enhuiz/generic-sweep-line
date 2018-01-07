@@ -10,7 +10,7 @@ def plot_points(ax, points):
     for point in points:
         xy = point['xy']
         radius = 0.02 if 'radius' not in point else point['radius']
-        color = 'black' if 'color' not in point else point['color']
+        color = 'black' if 'pt_color' not in point else point['pt_color']
         ax.add_patch(patches.Circle(point['xy'], radius=radius, color=color))
     return ax
 
@@ -18,9 +18,9 @@ def plot_points(ax, points):
 def plot_linked_points(ax, points, color='green'):
     points = list(points)
     for a, b in zip(points[:-1], points[1:]):
-        color = 'black' if 'color' not in a else a['color']
+        color = 'green' if 'ln_color' not in a else a['ln_color']
         ax.add_patch(patches.ConnectionPatch(
-            a['xy'], b['xy'], 'data', lw=1, color='green'))
+            a['xy'], b['xy'], 'data', lw=1, color=color))
     return ax
 
 

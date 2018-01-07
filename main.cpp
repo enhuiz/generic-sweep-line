@@ -201,7 +201,7 @@ void sweep_line(const vector<Segment> &segments)
 
         // report_intersections (events_at_next_point)
         {
-            pout << events_at_next_point.front().point << show;
+            
         }
 
         const auto event_filter = [&events_at_next_point](Event::Type type) {
@@ -292,6 +292,16 @@ void sweep_line(const vector<Segment> &segments)
                     }
                 }
             }
+        }
+
+        // illustrate
+        {
+            for (auto segment : status)
+            {
+                pout << ln_color("red") << segment;
+            }
+            pout << ln_color("black");
+            pout << events_at_next_point.front().point << show;
         }
     }
 }

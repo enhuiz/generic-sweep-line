@@ -47,14 +47,15 @@ class Plotter
     friend auto new_pt(double x, double y);
     friend auto pt_size(double radius);
     friend auto pt_color(std::string color);
+    friend auto ln_color(std::string color);
 
   protected:
     void virtual call(const std::string &s) = 0;
 
+    std::vector<std::function<Plotter &(Plotter &)>> applied;
+
     nlohmann::json point;
     nlohmann::json points;
-
-    int lnk_id = -1;
 };
 
 Plotter &show(Plotter &out)
@@ -65,20 +66,27 @@ Plotter &show(Plotter &out)
 
 Plotter &clean(Plotter &out)
 {
-    out.points.clear();
+    out.applied.clear();
     return out;
 }
 
 Plotter &beg_ln(Plotter &out)
 {
     static int lnk_id_generator = 0;
-    out.lnk_id = lnk_id_generator++;
+    int lnk_id = lnk_id_generator++;
+    out.applied.push_back([lnk_id](Plotter &out) -> Plotter & {
+        out.point["lnk_id"] = lnk_id;
+        return out;
+    });
     return out;
 }
 
 Plotter &end_ln(Plotter &out)
 {
-    out.lnk_id = -1;
+    out.applied.push_back([](Plotter &out) -> Plotter & {
+        out.point["lnk_id"] = -1;
+        return out;
+    });
     return out;
 }
 
@@ -87,24 +95,41 @@ auto new_pt(double x, double y)
     return [x, y](Plotter &out) -> Plotter & {
         out.end_prev_point();
         out.point = {
-            {"xy", {x, y}},
-            {"lnk_id", out.lnk_id}};
+            {"xy", {x, y}}};
+        for (auto f : out.applied)
+            f(out);
         return out;
     };
 }
 
 auto pt_size(double radius)
 {
-    return [radius](Plotter &out) -> Plotter & {
-        out.point["radius"] = radius;
-        return out;
+    return [&radius](Plotter &out) {
+        out.applied.push_back([&radius](Plotter &out) -> Plotter & {
+            out.point["radius"] = radius;
+            return out;
+        });
     };
 }
 
 auto pt_color(std::string color)
 {
-    return [color](Plotter &out) -> Plotter & {
-        out.point["color"] = color;
+    return [&color](Plotter &out) -> Plotter & {
+        out.applied.push_back([&color](Plotter &out) -> Plotter & {
+            out.point["pt_color"] = color;
+            return out;
+        });
+        return out;
+    };
+}
+
+auto ln_color(std::string color)
+{
+    return [&color](Plotter &out) -> Plotter & {
+        out.applied.push_back([&color](Plotter &out) -> Plotter & {
+            out.point["ln_color"] = color;
+            return out;
+        });
         return out;
     };
 }
