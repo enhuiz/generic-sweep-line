@@ -144,7 +144,7 @@ Plotter &operator<<(Plotter &pout, std::function<Plotter &(Plotter &)> op)
 Plotter &reset(Plotter &out)
 {
     out.applied.clear();
-    out << pt_color("black") << ln_color("green");
+    out << pt_color("black") << ln_color("green") << end_ln;
     return out;
 }
 
